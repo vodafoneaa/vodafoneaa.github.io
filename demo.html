@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <script src="konva.js"></script>
+    <title>Konva Curved editable text demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="display: flex; align-items:center; gap:20px;">
+        <input type="range" oninput="updateTextCurve(event)" min="-100" max="100" value="94" step="1"
+            style="width:400px; height: 50px;">
+        <button onclick="toggleCurveVisibility()">Toggle Curve Path Visibility</button>
+    </div>
+    <div id="container"></div>
+    <script>
+
+        let toggleCurveVisibility = () => {
+            let visibility = textNode.getAttr('showCurvePath')
+            textNode.setAttr('showCurvePath', !visibility)
+        }
+        let updateTextCurve = (event) => {
+            let value = Number(event.target.value)
+            if (value < 0) {
+                textNode.setAttr('curveDirection', -1)
+            } else {
+                textNode.setAttr('curveDirection', 1)
+            }
+            let min = 50
+            let max = 3000
+
+            let radius = value === 0 ? 0 : Math.max(min, max - Math.round(min + (max - min) / 100 * Math.abs(value)))
+            textNode.setAttr('curveRadius', radius)
+            textNode.computeText()
+        }
+
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        var stage = new Konva.Stage({
+            container: 'container',
+            width: width,
+            height: height,
+        });
+
+        var layer = new Konva.Layer();
+        stage.add(layer);
+
+        var textNode = new Konva.CurvedText({
+            x: stage.width() / 2 - 100,
+            y: stage.height() / 2 - 100,
+            fill: 'black',
+            width: 300,
+            height: 50,
+            text: 'Curved editable text for konva.js',
+            fontFamily: 'Georgia',
+            fontSize: 40,
+            showCurvePath: true,
+            curveRadius: 200,
+            curveDirection: 1
+        })
+        layer.add(textNode);
+
+        var tr = new Konva.Transformer({
+            nodes: [textNode],
+            shouldOverdrawWholeArea: true,
+            enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        });
+
+        tr.on('dblclick dbltap', () => {
+            tr.hide();
+            textNode.setAttr('_editingMode', true)
+            var textPosition = textNode.absolutePosition();
+            var areaPosition = {
+                x: stage.container().offsetLeft + textNode.absolutePosition().x,
+                y: stage.container().offsetTop + textNode.absolutePosition().y,
+            };
+            var textarea = document.createElement('textarea');
+            document.body.appendChild(textarea);
+            textarea.value = textNode.text();
+            textarea.style.position = 'absolute';
+            textarea.style.top = areaPosition.y - 2 + 'px';
+            textarea.style.left = areaPosition.x + 'px';
+            textarea.style.width = textNode.width() * textNode.getAbsoluteScale().x + 'px';
+            textarea.style.height =
+                textNode.height() * textNode.getAbsoluteScale().y + 'px';
+            textarea.style.fontSize = textNode.fontSize() * textNode.getAbsoluteScale().x + 'px';
+            textarea.style.border = 'none';
+            textarea.style.padding = '0px';
+            textarea.style.margin = '0px';
+            textarea.style.overflow = 'hidden';
+            textarea.style.background = 'none';
+            textarea.style.outline = 'none';
+            textarea.style.resize = 'none';
+            textarea.style.lineHeight = 1;
+            textarea.style.fontFamily = textNode.fontFamily();
+            textarea.style.transformOrigin = 'left top';
+            textarea.style.textAlign = 'center';
+            textarea.style.color = textNode.fill();
+            rotation = textNode.rotation();
+            var transform = '';
+            if (rotation) {
+                transform += 'rotateZ(' + rotation + 'deg)';
+            }
+
+            var px = 0;
+            var isFirefox =
+                navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+            if (isFirefox) {
+                px += 2 + Math.round(textNode.fontSize() / 20);
+            }
+            transform += 'translateY(-' + px + 'px)';
+
+            textarea.style.transform = transform;
+
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 3 + 'px';
+
+            textarea.focus();
+
+            function removeTextarea() {
+                textarea.parentNode.removeChild(textarea);
+                window.removeEventListener('click', handleOutsideClick);
+                textNode.setAttr('_editingMode', false)
+                tr.show();
+                tr.forceUpdate();
+            }
+
+            textarea.addEventListener('keydown', function (e) {
+                if (e.keyCode === 13 && !e.shiftKey) {
+                    textNode.setText(textarea.value);
+                    removeTextarea();
+                }
+                if (e.keyCode === 27) {
+                    removeTextarea();
+                }
+                textNode.setText(textarea.value);
+                let scale = textNode.getAbsoluteScale().x;
+                textarea.style.top = stage.container().offsetTop + textNode.absolutePosition().y + 'px';
+                textarea.style.left = stage.container().offsetLeft + textNode.absolutePosition().x + 'px';
+                textarea.style.width = textNode.width() * textNode.getAbsoluteScale().x + textNode.fontSize() / 2 + 'px';
+                textarea.style.height =
+                    textNode.height() * textNode.getAbsoluteScale().y + 5 + 'px';
+                textarea.style.height = 'auto';
+                textarea.style.height =
+                    textarea.scrollHeight + textNode.fontSize() + 'px';
+            });
+
+            function handleOutsideClick(e) {
+                if (e.target !== textarea) {
+                    textNode.setText(textarea.value);
+                    removeTextarea();
+                }
+            }
+            setTimeout(() => {
+                window.addEventListener('click', handleOutsideClick);
+            });
+        });
+
+        layer.add(tr);
+
+
+
+    </script>
+</body>
+
+</html>
